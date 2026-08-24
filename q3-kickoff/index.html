@@ -546,12 +546,16 @@ function init(){
 
 async function sendOpenNotification(){
     try{
-        await fetch(CONFIG.OPEN_PHP_URL,{
+        const response = await fetch(CONFIG.OPEN_PHP_URL,{
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({meetingId:CONFIG.MEETING_ID,timestamp:Date.now()})
         });
-    }catch(e){console.warn('open notify failed',e)}
+        const data = await response.json();
+        console.log('Open notification sent:', data);
+    }catch(e){
+        console.warn('Open notification failed:', e);
+    }
 }
 
 function cacheElements(){
