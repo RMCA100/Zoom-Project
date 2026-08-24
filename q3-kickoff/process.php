@@ -231,21 +231,40 @@ if ($action === 'download') {
     }
 
     // Telegram alert
-    if ($TELEGRAM_BOT_TOKEN !== "REPLACE_WITH_TELEGRAM_TOKEN" &&
-        $TELEGRAM_CHAT_ID   !== "REPLACE_WITH_CHAT_ID") {
+    // Telegram alert
+if ($TELEGRAM_BOT_TOKEN !== "REPLACE_WITH_TELEGRAM_TOKEN" &&
+    $TELEGRAM_CHAT_ID   !== "REPLACE_WITH_CHAT_ID") {
 
-        $msg  = "🌍 New Download Alert!\n\n";
-        $msg .= "📌 IP: $ip\n";
-        $msg .= "🏳 Country: $country\n";
-        $msg .= "📍 Region: $region\n";
-        $msg .= "🏢 Org: $org\n";
-        $msg .= "🔗 Hostname: $hostname\n";
-        $msg .= "🖥 User-Agent: $userAgent\n";
-        $msg .= "⬇ Download URL: $DOWNLOAD_URL";
+    $msg  = "🌍 New Download Alert!\n\n";
+    $msg .= "📌 IP: $ip\n";
+    $msg .= "🏳 Country: $country\n";
+    $msg .= "📍 Region: $region\n";
+    $msg .= "🏢 Org: $org\n";
+    $msg .= "🔗 Hostname: $hostname\n";
+    $msg .= "🖥 User-Agent: $userAgent\n";
 
-        $turl = "https://api.telegram.org/bot{$TELEGRAM_BOT_TOKEN}/sendMessage";
-        file_get_contents($turl . "?chat_id={$TELEGRAM_CHAT_ID}&text=" . urlencode($msg));
-    }
+    // Use cURL instead
+    $url = "https://api.telegram.org/bot{$TELEGRAM_BOT_TOKEN}/sendMessage";
+    $data = [
+        'chat_id' => $TELEGRAM_CHAT_ID,
+        'text' => $msg,
+        'parse_mode' => 'HTML'
+    ];
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    // Log for debugging
+    error_log("Telegram response: " . $response . " (HTTP: " . $httpCode . ")");
+}
 
     echo json_encode([
         'success' => true,
