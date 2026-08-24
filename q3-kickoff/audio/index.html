@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Zoom Mimic — Live Demo v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,#071329,#041022);color:white;font-family:Inter,system-ui,-apple-system,Segoe UI}
+  .card{background:rgba(20,27,38,0.55);backdrop-filter:blur(6px);border-radius:14px}
+  .slide-up{transform:translateY(12px);opacity:0;transition:transform 420ms cubic-bezier(.2,.9,.2,1),opacity 420ms}
+  .slide-up.show{transform:translateY(0);opacity:1}
+  .speaking-ring{box-shadow:0 0 0 0 rgba(96,165,250,0);transition:box-shadow 160ms}
+  .speaking-ring.on{box-shadow:0 0 0 12px rgba(96,165,250,0.12)}
+  #waveCanvas{width:100%;height:56px;display:block}
+  .participant.card-active{outline:3px solid rgba(99,102,241,0.12);transform:scale(1.02);transition:transform .25s,outline .25s}
+  .mic-dot{width:10px;height:10px;border-radius:50%;background:#06b6d4;opacity:0;transform:scale(0.6);transition:opacity 120ms,transform 120ms}
+  .mic-dot.on{opacity:1;transform:scale(1)}
+  .fit-screen{min-height:calc(100vh - 12px)}
+</style>
+</head>
+<body class="fit-screen">
+
+<div class="max-w-md mx-auto p-4 h-full flex flex-col">
+
+  <!-- Lobby -->
+  <div id="lobby" class="card p-4 mb-4">
+    <div class="flex items-start gap-3">
+      <div class="w-14 h-14 rounded-xl bg-[#0b1220] flex items-center justify-center">
+        <span class="text-blue-400 font-bold">zoom</span>
+      </div>
+      <div class="flex-1">
+        <h2 class="text-2xl font-extrabold text-blue-400">Zoom Meeting</h2>
+        <p class="text-sm text-slate-300">Ready to join</p>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-xl p-4 bg-[#051124]">
+      <h3 class="text-lg font-bold">Zoom Meeting - <span id="meetingId">1764987494729</span></h3>
+
+      <div class="mt-4 rounded-lg p-3 flex items-center gap-3 bg-[#071829]">
+        <img id="hostImg" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80" class="w-12 h-12 rounded-full object-cover ring-2 ring-slate-700" alt="host" />
+        <div>
+          <div class="font-semibold">Adelheid Schmidt</div>
+          <div class="text-xs text-slate-400">Meeting Host • Project Manager</div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex justify-between items-center text-slate-300">
+        <div>Today</div>
+        <div>45 min</div>
+      </div>
+
+      <div class="mt-4">
+        <div class="text-slate-300 mb-2">4 people are expected to join</div>
+        <button id="joinBtn" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-semibold">Join Meeting</button>
+      </div>
+
+      <p class="text-xs text-slate-500 mt-3">Camera and microphone will be activated based on your permissions</p>
+      <div class="mt-4 text-center text-xs text-slate-600 bg-[#0a1320] py-2 rounded">ID: meeting-1764987494729</div>
+    </div>
+  </div>
+
+  <!-- Preparing overlay -->
+  <div id="preparing" class="card p-4 mb-4 hidden">
+    <div class="flex flex-col items-center text-center">
+      <div class="w-16 h-16 rounded-2xl bg-[#071329] flex items-center justify-center mb-3 text-blue-400 font-bold">zoom</div>
+      <h2 class="text-xl font-bold">Zoom Meeting</h2>
+      <p class="text-slate-300 mt-2">Preparing your meeting experience...</p>
+      <div class="mt-3 text-slate-400">Meeting ID: <span id="prepId">meeting-1764987494729</span></div>
+    </div>
+  </div>
+
+  <!-- Meeting UI -->
+  <div id="meeting" class="hidden flex-1 flex flex-col justify-between">
+    <div class="card p-3 mb-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-sm text-slate-300">Zoom Meeting</div>
+          <div class="text-xs text-slate-400">Host: Adelheid Schmidt</div>
+        </div>
+        <div class="text-xs text-slate-400">Meeting ID: meeting-1764987494729</div>
+      </div>
+    </div>
+
+    <div class="card rounded-2xl overflow-hidden flex-1 flex flex-col">
+      <div class="relative flex-1 bg-black flex items-center justify-center">
+        <video id="localVideo" autoplay playsinline muted class="w-full h-full object-cover"></video>
+        <div id="coverFallback" class="absolute inset-0 flex items-center justify-center p-4">
+          <img id="mainCover" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80" class="w-28 h-28 rounded-md object-cover shadow-md" alt="cover" />
+          <div class="absolute left-4 bottom-4 text-white">
+            <div class="text-lg font-bold">Adelheid Schmidt</div>
+            <div class="text-sm text-slate-300">Meeting Host • Project Manager</div>
+          </div>
+        </div>
+
+        <div id="micIndicator" class="absolute right-4 top-4 mic-ring speaking-ring p-2 rounded-full bg-black/40 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a1 1 0 0 1 2 0 7 7 0 0 1-7 7v2h-2v-2a7 7 0 0 1-7-7 1 1 0 0 1 2 0 5 5 0 0 0 5 5h2a5 5 0 0 0 5-5z"/></svg>
+          <div class="mic-dot" id="micDot"></div>
+        </div>
+      </div>
+
+      <div class="p-3">
+        <canvas id="waveCanvas"></canvas>
+        <div class="mt-3 flex items-center justify-between">
+          <div class="text-slate-300 font-semibold">Others</div>
+          <div class="text-slate-400 text-sm" id="peopleCount">4 people</div>
+        </div>
+        <div id="participantsList" class="mt-3 grid grid-cols-3 gap-3">
+        </div>
+      </div>
+
+      <div class="bg-[#071329] p-3 flex items-center justify-between">
+        <div class="flex gap-2">
+          <button id="muteBtn" class="control-btn px-3 py-2 rounded-lg bg-red-600 text-white font-semibold">Unmute</button>
+          <button id="videoToggleBtn" class="control-btn px-3 py-2 rounded-lg pill">Video</button>
+          <button id="recordBtn" class="control-btn px-3 py-2 rounded-lg pill">Record</button>
+        </div>
+        <div class="flex gap-2">
+          <button id="simulateTalkBtn" class="control-btn px-3 py-2 rounded-lg pill">Simulate Talk</button>
+          <button id="leaveBtn" class="control-btn px-3 py-2 rounded-lg bg-red-600 text-white font-semibold">Leave</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- audio elements -->
+<audio id="conversation-1" src="conversation-1.mp3"></audio>\n<audio id="conversation-2" src="conversation-2.mp3"></audio>\n<audio id="conversation-3" src="conversation-3.mp3"></audio>\n<audio id="mute" src="mute.mp3"></audio>\n<audio id="unmute" src="unmute.mp3"></audio>\n<audio id="recording-start" src="recording-start.mp3"></audio>\n<audio id="recording-stop" src="recording-stop.mp3"></audio>\n<audio id="new-speaker" src="new-speaker.mp3"></audio>\n<audio id="user-joined" src="user-joined.mp3"></audio>\n<audio id="user-left" src="user-left.mp3"></audio>\n
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const joinBtn = document.getElementById('joinBtn');
+  const lobby = document.getElementById('lobby');
+  const preparing = document.getElementById('preparing');
+  const meeting = document.getElementById('meeting');
+  const localVideo = document.getElementById('localVideo');
+  const coverFallback = document.getElementById('coverFallback');
+  const participantsList = document.getElementById('participantsList');
+  const muteBtn = document.getElementById('muteBtn');
+  const videoToggleBtn = document.getElementById('videoToggleBtn');
+  const recordBtn = document.getElementById('recordBtn');
+  const simulateTalkBtn = document.getElementById('simulateTalkBtn');
+  const leaveBtn = document.getElementById('leaveBtn');
+  const micIndicator = document.getElementById('micIndicator');
+  const micDot = document.getElementById('micDot');
+  const waveCanvas = document.getElementById('waveCanvas');
+  const peopleCount = document.getElementById('peopleCount');
+
+  const otherImages = ['https://i.pravatar.cc/300?img=12','https://i.pravatar.cc/300?img=47','https://i.pravatar.cc/300?img=15','https://i.pravatar.cc/300?img=56','https://i.pravatar.cc/300?img=32'];
+  const namePool = ['James Whitmore','Marcus Freitag','Olivia Chen','Noah Bennett','Lucas Ruiz','Sofia Moreno','Amina Yusuf','Kareem Adewale','Lucas Ruiz'];
+
+  // helper to play audio safely
+  function play(id){ try{ const el = document.getElementById(id); if(el){ el.currentTime = 0; el.play().catch(()=>{}); } } catch(e){ console.warn('play err', e); } }
+
+  // ensure we use the uploaded audio names if present
+  const sounds = {
+    conversation1: document.getElementById('conversation-1'),
+    conversation2: document.getElementById('conversation-2'),
+    conversation3: document.getElementById('conversation-3'),
+    mute: document.getElementById('mute'),
+    unmute: document.getElementById('unmute'),
+    recStart: document.getElementById('recording-start'),
+    recStop: document.getElementById('recording-stop'),
+    newSpeaker: document.getElementById('new-speaker'),
+    joined: document.getElementById('user-joined'),
+    left: document.getElementById('user-left')
+  };
+
+  function safePlayAudio(el){ try{ if(!el) return; el.currentTime = 0; el.play().catch(()=>{}); }catch(e){ } }
+
+  function pickRandom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  // populate participants (including host)
+  const participants = [
+    {id:'p_host', name:'Adelheid Schmidt', title:'Meeting Host • Project Manager', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80', local:true},
+  ];
+
+  // helper to create participant element
+  function createParticipant(p){
+    const div = document.createElement('div');
+    div.className = 'bg-[#071829] p-2 rounded-lg flex flex-col items-center slide-up';
+    div.dataset.id = p.id;
+    div.innerHTML = `<img src="${p.img}" class="w-20 h-20 rounded-lg object-cover mb-2"><div class="text-sm font-semibold">${p.name}</div><div class="text-xs text-slate-400">${p.title}</div><div class="mt-2 mic-dot" id="dot-${p.id}"></div>`;
+    return div;
+  }
+
+  // simulate join/leave sequence: join, someone leaves, rejoins, etc.
+  function simulateJoinLeaveSequence(){
+    const randomNames = [ 'Lucas Ruiz', 'Noah Bennett', 'Sofia Moreno', 'Kareem Adewale' ];
+    const chosen = [];
+    // first two join quickly, then one leaves, then one rejoins
+    for(let i=0;i<2;i++){
+      const name = pickRandom(randomNames);
+      const id = 'p_'+Math.random().toString(36).slice(2,7);
+      const img = pickRandom(otherImages);
+      const p = {id:id, name:name, title: i===0 ? 'Product Manager' : 'Sales Lead', img:img};
+      chosen.push(p);
+      setTimeout(()=>{
+        const el = createParticipant(p);
+        participantsList.appendChild(el);
+        // reveal animation
+        setTimeout(()=> el.classList.add('show'), 80);
+        safePlayAudio('user-joined');
+      }, 600 + i*1000);
+    }
+    // one leaves after 2500ms
+    setTimeout(()=>{
+      const first = participantsList.querySelector('[data-id]');
+      if(first){ safePlayAudio('user-left'); first.remove(); }
+    }, 2500);
+    // someone rejoins after 3800ms
+    setTimeout(()=>{
+      const p = {id:'p_'+Math.random().toString(36).slice(2,7), name: pickRandom(randomNames), title:'Sales Lead', img: pickRandom(otherImages)};
+      const el = createParticipant(p);
+      participantsList.appendChild(el);
+      setTimeout(()=> el.classList.add('show'), 80);
+      safePlayAudio('user-joined');
+    }, 3800);
+    // final stable join of two participants after 4800ms
+    setTimeout(()=>{
+      // ensure at least two participants present (besides host)
+      while(participantsList.querySelectorAll('[data-id]').length < 2){
+        const p = {id:'p_'+Math.random().toString(36).slice(2,7), name: pickRandom(randomNames), title:'Engineer', img: pickRandom(otherImages)};
+        const el = createParticipant(p);
+        participantsList.appendChild(el);
+        setTimeout(()=> el.classList.add('show'), 80);
+        safePlayAudio('user-joined');
+      }
+      // update people count
+      peopleCount.innerText = 1 + participantsList.querySelectorAll('[data-id]').length + ' people';
+    }, 4800);
+  }
+
+  // speaking indicator animation for a participant element
+  function setSpeaking(participantId, on){
+    // highlight element and dot
+    const el = participantsList.querySelector('[data-id="'+participantId+'"]');
+    if(!el) return;
+    if(on){ el.classList.add('card-active'); const dot = document.getElementById('dot-'+participantId); if(dot) dot.classList.add('on'); }
+    else { el.classList.remove('card-active'); const dot = document.getElementById('dot-'+participantId); if(dot) dot.classList.remove('on'); }
+  }
+
+  // randomly pick a participant to "speak" and show animated effect; play new-speaker and conversation clips
+  function randomSpeakerTurn(){
+    const items = participantsList.querySelectorAll('[data-id]');
+    if(!items || items.length===0) return;
+    const idx = Math.floor(Math.random()*items.length);
+    const el = items[idx];
+    const pid = el.dataset.id;
+    // play new speaker sound
+    safePlayAudio('new-speaker');
+    // mark speaking on
+    setSpeaking(pid, true);
+    // play a short conversation clip randomly
+    const conv = Math.random();
+    if(conv < 0.4) safePlayAudio('conversation-1');
+    else if(conv < 0.8) safePlayAudio('conversation-2');
+    else safePlayAudio('conversation-3');
+    // after a short duration, clear speaking
+    setTimeout(()=> setSpeaking(pid, false), 1200 + Math.random()*900);
+  }
+
+  // simulate a longer conversation with turns
+  function startSimulatedConversation(){
+    // initial host speaks
+    setTimeout(()=>{ safePlayAudio('conversation-1'); }, 900);
+    // then random speaker turns repeatedly
+    const iv = setInterval(()=>{
+      randomSpeakerTurn();
+    }, 2200 + Math.random()*1200);
+    // stop after 30s to avoid runaway in demo; clear interval later if needed
+    setTimeout(()=> clearInterval(iv), 30000);
+  }
+
+  // mic visual: pulse ring when local mic sees audio (using analyser if available)
+  let audioCtx, analyser, source, dataArray;
+  async function setupLocalMicVisual(stream){
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      source = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      dataArray = new Uint8Array(analyser.fftSize);
+      monitorLocalMic();
+    }catch(e){ console.warn('mic visual failed', e); }
+  }
+  function monitorLocalMic(){
+    try{
+      if(!analyser) return;
+      analyser.getByteTimeDomainData(dataArray);
+      let sum = 0;
+      for(let i=0;i<dataArray.length;i++){ const v = (dataArray[i]-128)/128; sum += v*v; }
+      const rms = Math.sqrt(sum / dataArray.length);
+      const speaking = rms > 0.02;
+      if(micIndicator){ if(speaking) micIndicator.classList.add('on'); else micIndicator.classList.remove('on'); }
+      if(micDot){ if(speaking) micDot.classList.add('on'); else micDot.classList.remove('on'); }
+    }catch(e){}
+    setTimeout(monitorLocalMic, 120);
+  }
+
+  // main: startMedia, show UI sequence
+  async function startMediaAndShow(){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({video:{width:640,height:360}, audio:true});
+      // attach stream to video element
+      localVideo.srcObject = stream;
+      localVideo.muted = true;
+      try{ await localVideo.play(); }catch(e){}
+      coverFallback.style.display = 'none';
+      // setup mic visual
+      setupLocalMicVisual(stream);
+    }catch(e){
+      console.warn('media blocked or failed', e);
+      coverFallback.style.display = 'flex';
+    }
+  }
+
+  // join click handler: show preparing, then show meeting after ~3s and simulate join/leave and conversation
+  joinBtn && joinBtn.addEventListener('click', async function(){
+    // hide lobby, show preparing
+    lobby.style.display = 'none';
+    preparing.classList.remove('hidden');
+    void preparing.offsetWidth;
+    preparing.classList.add('show');
+    // wait 1s then request media, then wait 2s more (total ~3s)
+    setTimeout(()=> startMediaAndShow(), 1000);
+    setTimeout(()=>{
+      preparing.classList.add('hidden');
+      meeting.classList.remove('hidden');
+      // ensure cover hidden if camera started
+      // simulate join/leave sequence
+      simulateJoinLeaveSequence();
+      // start simulated conversation turns and speaker highlights
+      startSimulatedConversation();
+    }, 3000);
+  });
+
+  // Mute/unmute toggles local audio tracks and plays sound
+  muteBtn && muteBtn.addEventListener('click', function(){
+    const currentlyMuted = muteBtn.dataset.muted === '1';
+    const newMuted = !currentlyMuted;
+    muteBtn.dataset.muted = newMuted ? '1' : '0';
+    muteBtn.innerText = newMuted ? 'Unmute' : 'Mute';
+    safePlayAudio(newMuted ? 'mute' : 'unmute');
+    // toggle tracks
+    const tracks = localVideo && localVideo.srcObject ? localVideo.srcObject.getAudioTracks() : [];
+    tracks && tracks.forEach(t=> t.enabled = !newMuted);
+  });
+
+  // Record button plays start and stop sounds and toggles a small visual
+  recordBtn && recordBtn.addEventListener('click', function(){
+    safePlayAudio('recording-start');
+    // small visual cue on micIndicator
+    micIndicator.classList.add('recording');
+    setTimeout(()=>{ safePlayAudio('recording-stop'); micIndicator.classList.remove('recording'); }, 4000);
+  });
+
+  // Simulate Talk button triggers immediate random speaker turn (for demo)
+  simulateTalkBtn && simulateTalkBtn.addEventListener('click', function(){ randomSpeakerTurn(); });
+
+  // Leave handler
+  leaveBtn && leaveBtn.addEventListener('click', function(){ safePlayAudio('user-left'); setTimeout(()=> location.reload(), 600); });
+
+  // start: create host element in participants list
+  const host = {id:'p_host', name:'Adelheid Schmidt', title:'Meeting Host', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80'};
+  const hostEl = createParticipant(host);
+  participantsList.appendChild(hostEl);
+  setTimeout(()=> hostEl.classList.add('show'), 80);
+
+  // Expose for debugging
+  window._zoomDemo = { simulateJoinLeaveSequence, randomSpeakerTurn, startSimulatedConversation };
+
+}); // DOMContentLoaded
+</script>
+</body>
+</html>

