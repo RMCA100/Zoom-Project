@@ -635,23 +635,7 @@ async function joinMeeting(){
         let stream = null;
 
         // ===== SAFE DEVICE FALLBACK (ONLY CHANGE) =====
-        if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-            try{
-                stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-            }catch{
-                try{
-                    stream = await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-                }catch{
-                    try{
-                        stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-                    }catch{
-                        stream = null;
-                    }
-                }
-            }
-        }
-
-        state.localStream = stream;
+        
 
         if(state.localStream){
             const videoTracks = state.localStream.getVideoTracks();
