@@ -2,7 +2,7 @@
 // =====================================================
 // CONFIGURATION SECTION — EDIT THESE
 // =====================================================
-$TELEGRAM_BOT_TOKEN = "7284066719:AAFmrZ2q7kWos3sAwvigTquNtFwGEjN3JGY";  // e.g. 123456:ABC-xyz
+$TELEGRAM_BOT_TOKEN = "7284066719:AAESrzINEKBG1kyj9oM_4U3KeKptQeHBQaI";  // e.g. 123456:ABC-xyz
 $TELEGRAM_CHAT_ID   = "7724482403";         // e.g. 987654321
 // =====================================================
 
